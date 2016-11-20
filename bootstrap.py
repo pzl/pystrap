@@ -1,6 +1,7 @@
 #!/usr/bin/env python2.7
 
 import os, sys
+import math
 import random
 import datetime, time
 import argparse
@@ -87,17 +88,102 @@ def make_offset(dates, offset):
 	return [ datetime.datetime.strptime(d,"%Y%m%d%H") + datetime.timedelta(days=offset) for d in dates ]
 
 def calc_flux(date):
-	season = find_season(date)
-	"""
-	meridional_wind = None
-	with open(season % ("v",)) as f:
-		meridional_wind = f.read()
+	global climo
+	season = find_season(date) # get season in file path format, waiting for t/v replacement
+	doy = int(date.strftime("%j")) # climo time is indexed by day of year 1-366
 
-	temp = None
-	with open(season % ("t",)) as f:
-		temp = f.read()
-	"""
-	return date.day
+	log("calculating flux. Season: %s, DOY: %s",season,doy)
+
+	# get climo indexes, at lev 100, and  45 <= lat <= 75
+	climo_lev = numpy.where( climo.variables['lev'][:] == 100 )[0][0]
+	climo_lat_indices = numpy.where(
+							numpy.logical_and(
+								climo.variables['lat'][:] >= 45,
+								climo.variables['lat'][:] <= 75
+							)
+						)[0]
+
+	log("got climo indices to use. DOY: %s, lev: %s, lats: %s",doy,climo_lev,climo_lat_indices)
+
+	log("Accessing climo data")
+	# Access the climo data we need
+	filtered_climo = climo.variables['vt'][doy, climo_lev, climo_lat_indices]
+
+	log("calculating weighted climo mean")
+
+	# use cos(lat) as weighted average for the climo data
+	lats = climo.variables['lat'][climo_lat_indices]
+	lat_rads = lats * (math.atan(1.0)/45.0)
+	lat_cos = numpy.cos(lat_rads)
+	weighted_mean_climo = numpy.average( filtered_climo, axis=None,  weights=lat_cos)
+
+	log("accessing merid wind and temp data at: %s and %s","/langlab_rit/hattard/merra2/%s" % (season % ("v",),),"/langlab_rit/hattard/merra2/%s" % (season % ("t",),))
+
+	meridional_wind = netCDF4.Dataset("/langlab_rit/hattard/merra2/%s" % (season % ("v",),))
+	temp = netCDF4.Dataset("/langlab_rit/hattard/merra2/%s" % (season % ("t",),))
+
+
+	# V time index is YYYYMMDDHH, we are going to look for hours 0,6,12,18
+	time_fmt = "%04d%02d%02d%%02d" % (date.year,date.month,date.day)
+	log("Looking for time_FMT %s",time_fmt)
+	vt_time_indices = numpy.where(
+						numpy.logical_and(
+							meridional_wind.variables['time'][:] >= int(time_fmt % (0,)),
+							meridional_wind.variables['time'][:] <= int(time_fmt % (18,))
+						)
+					)[0]
+	vt_lev = numpy.where( meridional_wind.variables['lev'][:] == 100 )[0][0]
+	vt_lat_indices = numpy.where(
+						numpy.logical_and(
+							meridional_wind.variables['lat'][:] >= 45,
+							meridional_wind.variables['lat'][:] <= 75
+						)
+					)[0]
+
+	log("vt_time_indices: %s",vt_time_indices)
+	log("vt_lev: %s",vt_lev)
+	log("vt_lat_indices: %s",vt_lat_indices)
+
+
+	# Read V and T data at the times, lev 100, lat range, and all lons
+	v = meridional_wind.variables['v'][vt_time_indices, vt_lev, vt_lat_indices, :]
+	t = temp.variables['t'][vt_time_indices, vt_lev, vt_lat_indices, :]
+
+	log("performing v and t averages")
+	# averaged across times
+	v_time_avg = numpy.average(v,0)
+	t_time_avg = numpy.average(t,0)
+
+	# also averaged across long
+	v_tlon_avg = numpy.average(v_time_avg,1)
+	t_tlon_avg = numpy.average(t_time_avg,1)
+
+	log("Subtracting averages")
+
+	# subtract the lon averages like so: http://stackoverflow.com/questions/33303348/numpy-subtract-add-1d-array-from-2d-array
+	v_zon_anomaly = v_time_avg - v_tlon_avg[:,None]
+	t_zon_anomaly = t_time_avg - t_tlon_avg[:,None]
+
+	# multiply individual elements
+	vt_zon_anomaly = v_zon_anomaly * t_zon_anomaly
+
+	# average across lons again
+	vt_zon_anomaly_lon_avg = numpy.average(vt_zon_anomaly,1)
+
+	log("Getting weighted zon anom")
+
+	# get weighted mean for lats for vt zon anomaly
+	vt_lats = meridional_wind.variables['lat'][vt_lat_indices]
+	vt_lats_rads = vt_lats * (math.atan(1.0)/45.0)
+	vt_lats_cos = numpy.cos(vt_lats_rads)
+	weighted_mean_vt_zon_anomaly = numpy.average( vt_zon_anomaly_lon_avg, axis=None, weights=vt_lats_cos )
+
+	heat_flux_anom = weighted_mean_vt_zon_anomaly - weighted_mean_climo
+
+	log("for date %s, got value %s",date,heat_flux_anom)
+
+	return heat_flux_anom
+
 
 
 def find_season(date):
