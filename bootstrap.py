@@ -52,12 +52,12 @@ def load_dates():
 climo = None
 def load_climo_vt():
 	global climo
-	climo = netCDF4.Dataset("vt.mean.anl.nc").
+	climo = netCDF4.Dataset("vt.mean.anl.nc")
 	log("Process %d loaded climo",os.getpid())
 
 
 def clean_dates(line):
-	return line.split(' ')[0]
+	return line.split(' ')[2]
 
 
 def spawn_cases(n):
