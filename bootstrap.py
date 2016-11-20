@@ -14,11 +14,12 @@ import netCDF4
 verbose=False
 replacement=False
 samples=52
+climo_lev=None
+climo_lat_indices=None
+
 
 def arguments():
-	global verbose
-	global replacement
-	global samples
+	global verbose, replacement, samples
 	parser = argparse.ArgumentParser(description="bootstraps some research stuff")
 	parser.add_argument('-v','--verbose',action='store_true')
 	parser.add_argument('-n','--cases',action='store',type=int,default=10000)
@@ -51,10 +52,18 @@ def load_dates():
 
 climo = None
 def load_climo_vt():
-	global climo
+	global climo, climo_lev, climo_lat_indices
 	climo = netCDF4.Dataset("vt.mean.anl.nc")
 	log("Process %d loaded climo",os.getpid())
 
+	# get climo indexes, at lev 100, and  45 <= lat <= 75
+	climo_lev = numpy.where( climo.variables['lev'][:] == 100 )[0][0]
+	climo_lat_indices = numpy.where(
+							numpy.logical_and(
+								climo.variables['lat'][:] >= 45,
+								climo.variables['lat'][:] <= 75
+							)
+						)[0]
 
 def clean_dates(line):
 	return line.split(' ')[2]
@@ -66,8 +75,7 @@ def spawn_cases(n):
 	pool.map(single_sample, range(n))
 
 def single_sample(i):
-	global replacement
-	global samples
+	global replacement, samples
 	rand_dates = get_dates(samples,replacement)
 	log("date list: %s",rand_dates)
 	averages = []
@@ -90,23 +98,9 @@ def get_dates(N=52, replace=False):
 def make_offset(dates, offset):
 	return [ datetime.datetime.strptime(d,"%Y%m%d%H") + datetime.timedelta(days=offset) for d in dates ]
 
-def calc_flux(date):
-	global climo
-	season = find_season(date) # get season in file path format, waiting for t/v replacement
+def get_weighted_climo(date):
+	global climo, climo_lev, climo_lat_indices
 	doy = int(date.strftime("%j")) # climo time is indexed by day of year 1-366
-
-	log("calculating flux. Season: %s, DOY: %s",season,doy)
-
-	# get climo indexes, at lev 100, and  45 <= lat <= 75
-	climo_lev = numpy.where( climo.variables['lev'][:] == 100 )[0][0]
-	climo_lat_indices = numpy.where(
-							numpy.logical_and(
-								climo.variables['lat'][:] >= 45,
-								climo.variables['lat'][:] <= 75
-							)
-						)[0]
-
-	log("got climo indices to use. DOY: %s, lev: %s, lats: %s",doy,climo_lev,climo_lat_indices)
 
 	log("Accessing climo data")
 	# Access the climo data we need
