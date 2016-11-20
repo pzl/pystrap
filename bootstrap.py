@@ -71,8 +71,10 @@ def clean_dates(line):
 
 def spawn_cases(n):
 	log("Spawning %d processes",cpu_count()*2)
-	pool = Pool( cpu_count()*2, load_inits ) # load the date list into each process at the start
-	pool.map(single_sample, range(n))
+	#pool = Pool( cpu_count()*2, load_inits ) # load the date list into each process at the start
+	#pool.map(single_sample, range(n))
+	load_inits()
+	single_sample(1)
 
 def single_sample(i):
 	global replacement, samples
