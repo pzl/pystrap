@@ -74,8 +74,11 @@ def single_sample(i):
 	for date_offset in range(-30,31): # [a,b)
 		offset_dates = make_offset(rand_dates, date_offset)
 		log("%d for offset %d, dates: %s", os.getpid(), date_offset, offset_dates)
-		fluxes = map(calc_flux, offset_dates)
-		averages.append( sum(fluxes)/len(fluxes) )
+		fluxes = numpy.array(map(calc_flux, offset_dates))
+		averages.append(fluxes.mean())
+	with open("sample-%06d.txt" % (i,),"w") as f:
+		for line in averages:
+			f.write("%s\n" % (line,))
 
 	log("iteration %d has averages: %s",i,averages)
 
