@@ -16,22 +16,31 @@ verbose=False
 replacement=False
 samples=52
 percentile=2.0
+datefile=None
+fluxdir=None
+output=None
 
 
 def arguments():
-	global verbose, replacement, samples, percentile
+	global verbose, replacement, samples, percentile, datefile, fluxdir, output
 	parser = argparse.ArgumentParser(description="bootstraps some research stuff")
 	parser.add_argument('-v','--verbose',action='store_true',help="print a lot of extra crap")
 	parser.add_argument('-n','--cases',action='store',type=int,default=10000,help="how many iterations to run (default 10000)")
 	parser.add_argument('-r','--replacement',action='store_true',help='WITH replacement')
 	parser.add_argument('-s','--samples',action='store',type=int,default=52,help="How many dates are selected")
 	parser.add_argument('-p','--percentile',action='store',type=float,default=2.0,help="What percentile to fetch (grabs X and 100-X). Default is 2.0, which will fetch percentiles 2.0 and 98.0, writing to 96.txt")
+	parser.add_argument('datefile',metavar="DATELIST",help="file containing list of YYYYMMDDHH dates to select from. Dates must be in second space-separated column of file. First two cols ignored.")
+	parser.add_argument('fluxdir',metavar="FLUXDIR",help="directory containing the pre-computed heat flux averages")
+	parser.add_argument('output',metavar="OUTPUT",help="output file")
 
 	args = parser.parse_args()
 	verbose = args.verbose
 	replacement = args.replacement
 	samples = args.samples
 	percentile = args.percentile
+	datefile = args.datefile
+	fluxdir = args.fluxdir
+	output = args.output
 
 	answer = raw_input("%d cases of %d samples, with%s replacement. Continue? Y/n:  " % ( args.cases, samples, 'out' if not replacement else '' )).lower()
 	if answer == '' or answer == 'y' or answer == 'yes':
@@ -46,8 +55,8 @@ def load_inits():
 
 date_list = []
 def load_dates():
-	global date_list
-	with open("dates.txt","r") as f:
+	global datefile, date_list
+	with open(datefile,"r") as f:
 		date_list = f.read().splitlines()
 	date_list = map(clean_dates, date_list) # remove columns
 	log("Loaded date list")
@@ -58,8 +67,8 @@ def clean_dates(line):
 
 fluxes={}
 def load_fluxes():
-	global fluxes
-	flux_list = glob.iglob('fluxes/*/*.txt')
+	global fluxes, fluxdir
+	flux_list = glob.iglob("%s/*/*.txt" % (fluxdir,))
 	for flux in flux_list:
 		with open(flux,"r") as file:
 			fluxes[os.path.splitext(os.path.basename(flux))[0]] = numpy.float(file.read())
@@ -120,11 +129,6 @@ def get_flux(date):
 	global fluxes
 	return fluxes["%4d%02d%02d00" % (date.year,date.month,date.day)]
 
-
-def find_season(date):
-	name = "%s%s" % (date.year-1,date.year) if date.month < 7 else "%s%s" % (date.year,date.year+1)
-	return "fluxes/%s/%4d%02d%02d00.txt" % (name,date.year,date.month,date.day)
-
 def log(s,*args):
 	global verbose
 	if verbose:
@@ -142,12 +146,9 @@ def get_percentiles(n, avgs):
 
 
 def write_percentiles(percentiles):
-	global percentile
-	if not os.path.isdir("output"):
-		os.mkdir("output")
-	final_name = "output/%.2f.txt" % ( 100-2.0*percentile,)
-	print("Writing result to %s" % (final_name))
-	with open(final_name,"w") as f:
+	global percentile, output
+	print("Writing result to %s" % (output,))
+	with open(output,"w") as f:
 		for p in percentiles:
 			f.write("%s %s\n" % (p[0],p[1]))
 
