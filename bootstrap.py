@@ -19,7 +19,7 @@ percentile=2.0
 
 
 def arguments():
-	global verbose, replacement, samples
+	global verbose, replacement, samples, percentile
 	parser = argparse.ArgumentParser(description="bootstraps some research stuff")
 	parser.add_argument('-v','--verbose',action='store_true',help="print a lot of extra crap")
 	parser.add_argument('-n','--cases',action='store',type=int,default=10000,help="how many iterations to run (default 10000)")
@@ -31,6 +31,7 @@ def arguments():
 	verbose = args.verbose
 	replacement = args.replacement
 	samples = args.samples
+	percentile = args.percentile
 
 	answer = raw_input("%d cases of %d samples, with%s replacement. Continue? Y/n:  " % ( args.cases, samples, 'out' if not replacement else '' )).lower()
 	if answer == '' or answer == 'y' or answer == 'yes':
@@ -144,7 +145,7 @@ def write_percentiles(percentiles):
 	global percentile
 	if not os.path.isdir("output"):
 		os.mkdir("output")
-	final_name = "output/%d.txt" % (int( 100-2*percentile ),)
+	final_name = "output/%.2f.txt" % ( 100-2.0*percentile,)
 	print("Writing result to %s" % (final_name))
 	with open(final_name,"w") as f:
 		for p in percentiles:
