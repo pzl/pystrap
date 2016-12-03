@@ -5,25 +5,27 @@ import math
 import random
 import glob
 import datetime, time
+import shutil
 import argparse
 from multiprocessing import Pool, cpu_count
 
 import numpy
-import netCDF4
 
 ###### Command line options
 verbose=False
 replacement=False
 samples=52
+percentile=2.0
 
 
 def arguments():
 	global verbose, replacement, samples
 	parser = argparse.ArgumentParser(description="bootstraps some research stuff")
-	parser.add_argument('-v','--verbose',action='store_true')
-	parser.add_argument('-n','--cases',action='store',type=int,default=10000)
-	parser.add_argument('-r','--replacement',action='store_true')
-	parser.add_argument('-s','--samples',action='store',type=int,default=52)
+	parser.add_argument('-v','--verbose',action='store_true',help="print a lot of extra crap")
+	parser.add_argument('-n','--cases',action='store',type=int,default=10000,help="how many iterations to run (default 10000)")
+	parser.add_argument('-r','--replacement',action='store_true',help='WITH replacement')
+	parser.add_argument('-s','--samples',action='store',type=int,default=52,help="How many dates are selected")
+	parser.add_argument('-p','--percentile',action='store',type=float,default=2.0,help="What percentile to fetch (grabs X and 100-X). Default is 2.0, which will fetch percentiles 2.0 and 98.0, writing to 96.txt")
 
 	args = parser.parse_args()
 	verbose = args.verbose
@@ -62,6 +64,13 @@ def load_fluxes():
 			fluxes[os.path.splitext(os.path.basename(flux))[0]] = numpy.float(file.read())
 
 
+def load_averages():
+	samples = []
+	sample_list = glob.iglob("samples/*.txt")
+	for sample in sample_list:
+		with open(sample,"r") as f:
+			samples.append(map(float,f.read().splitlines()))
+	return numpy.array(samples)
 
 
 def spawn_cases(n):
@@ -120,10 +129,41 @@ def log(s,*args):
 	if verbose:
 		print(s % args)
 
+
+def get_percentiles(n, avgs):
+	global percentile
+	ordered = numpy.sort(avgs.T)
+	perc_small = int(percentile/100 * n)
+	perc_large = int((100-percentile)/100 * n)
+
+	percentiles = [ (x[perc_small],x[perc_large]) for x in ordered ]
+	return percentiles
+
+
+def write_percentiles(percentiles):
+	global percentile
+	if not os.path.isdir("output"):
+		os.mkdir("output")
+	final_name = "output/%d.txt" % (int( 100-2*percentile ),)
+	print("Writing result to %s" % (final_name))
+	with open(final_name,"w") as f:
+		for p in percentiles:
+			f.write("%s %s\n" % (p[0],p[1]))
+
+
+def clean_up_averages():
+	shutil.rmtree("samples")
+
 if __name__ == '__main__':
 	start = time.time()
 	n = arguments()
 	load_inits()
 	spawn_cases(n)
-	end = time.time()
-	print('finished in %s' % (end-start,))
+	average_finish = time.time()
+	print('flux averages calculated in %s' % (average_finish-start,))
+
+	avgs = load_averages()
+	perc = get_percentiles(n,avgs)
+	write_percentiles(perc)
+
+	clean_up_averages()
