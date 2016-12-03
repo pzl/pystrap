@@ -2,3 +2,5 @@
 *.sw[po]
 
 dates.txt
+fluxes/
+samples/
