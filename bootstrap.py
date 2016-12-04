@@ -150,19 +150,19 @@ def log(s,*args):
 def get_percentiles(n, avgs):
 	global percentile
 	ordered = numpy.sort(avgs.T)
-	perc_small = int(percentile/100 * n)
-	perc_large = int((100-percentile)/100 * n)
+	perc_low = int(percentile/100 * n)
+	perc_high = int((100-percentile)/100 * n)
 
-	percentiles = [ (x[perc_small],x[perc_large]) for x in ordered ]
+	percentiles = [ (x[perc_low],x[perc_high]) for x in ordered ]
 	return percentiles
 
 
 def write_percentiles(percentiles):
-	global percentile, output
+	global percentile, output, offset_range
 	print("Writing result to %s" % (output,))
 	with open(output,"w") as f:
-		for p in percentiles:
-			f.write("%s %s\n" % (p[0],p[1]))
+		for i,p in enumerate(percentiles):
+			f.write("{offset:<3d} {perc_low:10f} {perc_high:10f}\n".format(offset=offset_range[0]+i,perc_low=p[0],perc_high=p[1]))
 
 
 def clean_up_averages():
