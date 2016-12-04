@@ -52,7 +52,13 @@ def arguments():
 			repl='out' if not replacement else '',
 			begin=args.begin,
 			end=args.end)
-	answer = raw_input(prompt).lower()
+
+	#fix for python 2/3 function renaming
+	global input
+	try: input = raw_input
+	except NameError: pass
+
+	answer = input(prompt).lower()
 	if answer == '' or answer == 'y' or answer == 'yes':
 		return args.iterations
 	else:
@@ -68,7 +74,7 @@ def load_dates():
 	global datefile, date_list
 	with open(datefile,"r") as f:
 		date_list = f.read().splitlines()
-	date_list = map(clean_dates, date_list) # remove columns
+	date_list = list(map(clean_dates, date_list)) # remove columns
 	log("Loaded date list")
 
 def clean_dates(line):
@@ -89,7 +95,7 @@ def load_averages():
 	sample_list = glob.iglob("samples/*.txt")
 	for sample in sample_list:
 		with open(sample,"r") as f:
-			samples.append(map(float,f.read().splitlines()))
+			samples.append(list(map(float,f.read().splitlines())))
 	return numpy.array(samples)
 
 
@@ -97,7 +103,7 @@ def spawn_iterations(n):
 	log("Spawning %d processes",cpu_count()*2)
 	pool = Pool( cpu_count()*2 )
 	pool.map(single_sample, range(n))
-	#map(single_sample,range(n))
+	#list(map(single_sample,range(n)))
 
 def single_sample(i):
 	global replacement, samples, offset_range
@@ -107,7 +113,7 @@ def single_sample(i):
 	for offset in range(*offset_range): # [a,b)
 		offset_dates = make_offset(rand_dates, offset)
 		log("%d for offset %d, dates: %s", os.getpid(), offset, offset_dates)
-		fluxes = numpy.array(map(get_flux, offset_dates))
+		fluxes = numpy.array(list(map(get_flux, offset_dates)))
 		log("got fluxes %s",fluxes)
 		log("with mean: %s",fluxes.mean())
 		averages.append(fluxes.mean())

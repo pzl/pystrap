@@ -6,7 +6,7 @@ This is a really narrow use-case program to perform bootstrapping on a specific 
 Requirements
 ------------
 
-- Python (2.5+, preferably 2.7). Not designed to work with python3 right now
+- Python (2.x or 3.x will work)
 - Numpy
 
 Running
