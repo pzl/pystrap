@@ -102,8 +102,10 @@ def single_sample(i):
 		log("with mean: %s",fluxes.mean())
 		averages.append(fluxes.mean())
 	log("List of averages: %s",averages)
-	if not os.path.isdir("samples"):
+	try:
 		os.mkdir("samples")
+	except OSError:
+		pass # folder already exists. good!
 	with open("samples/%06d.txt" % (i,),"w") as f:
 		for line in averages:
 			f.write("%s\n" % (line,))
