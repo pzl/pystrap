@@ -25,7 +25,7 @@ def arguments():
 	global verbose, replacement, samples, percentile, datefile, fluxdir, output
 	parser = argparse.ArgumentParser(description="bootstraps some research stuff")
 	parser.add_argument('-v','--verbose',action='store_true',help="print a lot of extra crap")
-	parser.add_argument('-n','--cases',action='store',type=int,default=10000,help="how many iterations to run (default 10000)")
+	parser.add_argument('-n','--iterations',action='store',type=int,default=10000,help="how many iterations to run (default 10000)")
 	parser.add_argument('-r','--replacement',action='store_true',help='WITH replacement')
 	parser.add_argument('-s','--samples',action='store',type=int,default=52,help="How many dates are selected")
 	parser.add_argument('-p','--percentile',action='store',type=float,default=2.0,help="What percentile to fetch (grabs X and 100-X). Default is 2.0, which will fetch percentiles 2.0 and 98.0, writing to 96.txt")
@@ -44,7 +44,7 @@ def arguments():
 
 	answer = raw_input("%d cases of %d samples, with%s replacement. Continue? Y/n:  " % ( args.cases, samples, 'out' if not replacement else '' )).lower()
 	if answer == '' or answer == 'y' or answer == 'yes':
-		return args.cases
+		return args.iterations
 	else:
 		sys.exit()
 
@@ -83,7 +83,7 @@ def load_averages():
 	return numpy.array(samples)
 
 
-def spawn_cases(n):
+def spawn_iterations(n):
 	log("Spawning %d processes",cpu_count()*2)
 	pool = Pool( cpu_count()*2 )
 	pool.map(single_sample, range(n))
@@ -162,7 +162,7 @@ if __name__ == '__main__':
 	start = time.time()
 	n = arguments()
 	load_inits()
-	spawn_cases(n)
+	spawn_iterations(n)
 	average_finish = time.time()
 	print('flux averages calculated in %s' % (average_finish-start,))
 
