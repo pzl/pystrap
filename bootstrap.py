@@ -19,17 +19,20 @@ percentile=2.0
 datefile=None
 fluxdir=None
 output=None
+offset_range=[0,0]
 
 
 def arguments():
-	global verbose, replacement, samples, percentile, datefile, fluxdir, output
+	global verbose, replacement, samples, percentile, offset_range, datefile, fluxdir, output
 	parser = argparse.ArgumentParser(description="bootstraps some research stuff")
 	parser.add_argument('-v','--verbose',action='store_true',help="print a lot of extra crap")
 	parser.add_argument('-n','--iterations',action='store',type=int,default=10000,help="how many iterations to run (default 10000)")
 	parser.add_argument('-r','--replacement',action='store_true',help='WITH replacement')
-	parser.add_argument('-s','--samples',action='store',type=int,default=52,help="How many dates are selected")
-	parser.add_argument('-p','--percentile',action='store',type=float,default=2.0,help="What percentile to fetch (grabs X and 100-X). Default is 2.0, which will fetch percentiles 2.0 and 98.0, writing to 96.txt")
+	parser.add_argument('-s','--samples',action='store',type=int,default=52,help="How many dates are selected (default 52)")
+	parser.add_argument('-p','--percentile',action='store',type=float,default=2.0,help="What percentile to fetch (grabs X and 100-X). Default is 2.0, which will fetch percentiles 2.0 and 98.0")
 	parser.add_argument('datefile',metavar="DATELIST",help="file containing list of YYYYMMDDHH dates to select from. Dates must be in second space-separated column of file. First two cols ignored.")
+	parser.add_argument('-b','--begin',action='store',type=int,default=-30,help="Beginning offset, in days from chosen sample date, inclusive (default -30)")
+	parser.add_argument('-e','--end',action='store',type=int,default=30,help="Ending offset, in days from chosen sample date, inclusive (default 30).")
 	parser.add_argument('fluxdir',metavar="FLUXDIR",help="directory containing the pre-computed heat flux averages")
 	parser.add_argument('output',metavar="OUTPUT",help="output file")
 
@@ -38,11 +41,18 @@ def arguments():
 	replacement = args.replacement
 	samples = args.samples
 	percentile = args.percentile
+	offset_range = [args.begin,args.end+1]
 	datefile = args.datefile
 	fluxdir = args.fluxdir
 	output = args.output
 
-	answer = raw_input("%d cases of %d samples, with%s replacement. Continue? Y/n:  " % ( args.cases, samples, 'out' if not replacement else '' )).lower()
+	prompt = "{n:d} iterations of {date:d} dates, with{repl:s} replacement. From {begin:d} to {end:d}. Continue? Y/n:  ".format(
+			n=args.iterations,
+			date=samples,
+			repl='out' if not replacement else '',
+			begin=args.begin,
+			end=args.end)
+	answer = raw_input(prompt).lower()
 	if answer == '' or answer == 'y' or answer == 'yes':
 		return args.iterations
 	else:
@@ -90,13 +100,13 @@ def spawn_iterations(n):
 	#map(single_sample,range(n))
 
 def single_sample(i):
-	global replacement, samples
+	global replacement, samples, offset_range
 	rand_dates = get_dates(samples,replacement)
 	log("date list: %s",rand_dates)
 	averages = []
-	for date_offset in range(-30,31): # [a,b)
-		offset_dates = make_offset(rand_dates, date_offset)
-		log("%d for offset %d, dates: %s", os.getpid(), date_offset, offset_dates)
+	for offset in range(*offset_range): # [a,b)
+		offset_dates = make_offset(rand_dates, offset)
+		log("%d for offset %d, dates: %s", os.getpid(), offset, offset_dates)
 		fluxes = numpy.array(map(get_flux, offset_dates))
 		log("got fluxes %s",fluxes)
 		log("with mean: %s",fluxes.mean())
