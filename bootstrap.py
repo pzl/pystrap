@@ -27,7 +27,7 @@ def arguments():
 	parser = argparse.ArgumentParser(description="bootstraps some research stuff")
 	parser.add_argument('-v','--verbose',action='store_true',help="print a lot of extra crap")
 	parser.add_argument('-n','--iterations',action='store',type=int,default=10000,help="how many iterations to run (default 10000)")
-	parser.add_argument('-r','--replacement',action='store_true',help='WITH replacement')
+	parser.add_argument('-r','--replacement',action='store_true',help="enable replacement (when given, selections are made WITH replacement)")
 	parser.add_argument('-s','--samples',action='store',type=int,default=52,help="How many dates are selected (default 52)")
 	parser.add_argument('-p','--percentile',action='store',type=float,default=2.0,help="What percentile to fetch (grabs X and 100-X). Default is 2.0, which will fetch percentiles 2.0 and 98.0")
 	parser.add_argument('datefile',metavar="DATELIST",help="file containing list of YYYYMMDDHH dates to select from. Dates must be in second space-separated column of file. First two cols ignored.")
