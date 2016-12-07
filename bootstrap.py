@@ -30,7 +30,7 @@ def arguments():
 	parser.add_argument('-r','--replacement',action='store_true',help="enable replacement (when given, selections are made WITH replacement)")
 	parser.add_argument('-s','--samples',action='store',type=int,default=52,help="How many dates are selected (default 52)")
 	parser.add_argument('-p','--percentile',action='store',type=float,default=2.0,help="What percentile to fetch (grabs X and 100-X). Default is 2.0, which will fetch percentiles 2.0 and 98.0")
-	parser.add_argument('datefile',metavar="DATELIST",help="file containing list of YYYYMMDDHH dates to select from. Dates must be in second space-separated column of file. First two cols ignored.")
+	parser.add_argument('datefile',metavar="DATELIST",help="file containing list of YYYYMMDDHH dates in each line to select from.")
 	parser.add_argument('-b','--begin',action='store',type=int,default=-30,help="Beginning offset, in days from chosen sample date, inclusive (default -30)")
 	parser.add_argument('-e','--end',action='store',type=int,default=30,help="Ending offset, in days from chosen sample date, inclusive (default 30).")
 	parser.add_argument('fluxdir',metavar="FLUXDIR",help="directory containing the pre-computed heat flux averages")
@@ -74,11 +74,7 @@ def load_dates():
 	global datefile, date_list
 	with open(datefile,"r") as f:
 		date_list = f.read().splitlines()
-	date_list = list(map(clean_dates, date_list)) # remove columns
 	log("Loaded date list")
-
-def clean_dates(line):
-	return line.split(' ')[2]
 
 
 fluxes={}

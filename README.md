@@ -32,7 +32,7 @@ Running
 
 ### Arguments
 
-- **DATELIST**: file containing list of YYYYMMDDHH dates to select from. Dates must be in second space-separated column of file. First two cols ignored.
+- **DATELIST**: file containing list of YYYYMMDDHH dates, one per line, to select from.
 - **FLUXDIR**: directory containing the pre-computed heat flux averages
 - **OUTPUT**: output file
 
