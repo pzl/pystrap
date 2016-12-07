@@ -1,7 +1,8 @@
 *.nc
 *.sw[po]
+*.txt
 
-dates.txt
+
 fluxes/
 samples/
 output/
